@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * @file
+ * Contains get_youtube_data.module.
+ */
+use Drupal\Core\Form\FormBase;
+use Drupal\Core\Form\FormStateInterface;
+
+/**
+ * Implements hook_form_alter
+ */
+function get_youtube_data_form_node_youtube_data_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+	foreach (array_keys($form['actions']) as $action) {
+  	if ($action != 'preview' && isset($form['actions'][$action]['#type']) && $form['actions'][$action]['#type'] === 'submit') {
+	   	$form['actions'][$action]['#submit'][] = 'custom_youtube_data_form_submit_handler';
+   	}
+ 	}
+}
+
+
+function custom_youtube_data_form_submit_handler(&$form, FormStateInterface $form_state, $form_id) {
+	$form_values = $form_state->getValues();
+	echo $channel_id = $form_values['title'][0]['value'];
+	//$channel_id = 'UCdnPPbjGZiX7Dw56YDYVDsg';
+	
+
+	$apikey = 'AIzaSyCqjhk_uPOq-FFq2R3PYKLg4Fqym2BZg0Q'; 
+	$fetch_result = "https://www.googleapis.com/youtube/v3/search?key=$apikey&channelId=$channel_id&part=snippet,id&order=date&maxResults=20";
+	$videoList = file_get_contents($fetch_result);
+	// Convert JSON to PHP Array
+	$decoded = json_decode($videoList, true);
+	// Run a loop to display list of videos
+	foreach ($decoded['items'] as $items) {
+    $video_id = $items['id']['videoId'];
+		$channel_name = $items['snippet']['channelTitle'];
+		$channel_description = $items['snippet']['description'];
+		if($video_id) {
+			$video_urls .= 'https://www.youtube.com/watch?v='.$video_id.', ';
+		}
+	}
+ 	if ($entity = $form_state->getFormObject()->getEntity()) {
+   	$entity->set('field_name_of_channel', $channel_name);
+		$entity->set('field_description', $video_urls);
+	}
+	$entity->save();
+}
+
+// Name of the channel
+// - About
+// - List of video URLs
